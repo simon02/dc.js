@@ -35,12 +35,19 @@ dc.seriesChart = function (parent, chartGroup) {
     var _seriesAccessor;
     var _seriesSort = d3.ascending;
     var _valueSort = keySort;
+    var _filterSeries;
 
     _chart._mandatoryAttributes().push('seriesAccessor','chart');
     _chart.shareColors(true);
 
     function keySort(a,b) {
         return d3.ascending(_chart.keyAccessor()(a), _chart.keyAccessor()(b));
+    }
+
+    _chart.filterSeries = function (_) {
+        if (!arguments.length) return _filterSeries;
+        _filterSeries = _;
+        return _chart;
     }
 
     _chart._preprocessData = function () {
@@ -52,6 +59,8 @@ dc.seriesChart = function (parent, chartGroup) {
         if(_valueSort)
             nester.sortValues(_valueSort);
         var nesting = nester.entries(_chart.data());
+        if (_filterSeries)
+            nesting = nesting.filter(_filterSeries);
         var children =
             nesting.map(function(sub,i) {
                 var subChart = _charts[sub.key] || _chartFunction.call(_chart,_chart,chartGroup,sub.key,i);

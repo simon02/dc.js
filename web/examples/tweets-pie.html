@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>dc.js - Pie Chart Example</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="../css/dc.css"/>
+</head>
+<body>
+
+<div id="test"></div>
+<div id="topics_in_time"></div>
+<div id="tags"></div>
+
+
+<script type="text/javascript" src="../js/d3.js"></script>
+<script type="text/javascript" src="../js/crossfilter.js"></script>
+<script type="text/javascript" src="../js/dc.js"></script>
+<script type="text/javascript" src="../js/jquery-1.11.1.min.js"></script>
+<script type="text/javascript">
+
+var chart = dc.pieChart("#test");
+var lineChart = dc.seriesChart("#topics_in_time");
+d3.json("tweets_min.json", function(error, experiments) {
+
+  experiments.forEach(function(d) {
+    if (d.tags instanceof Array && d.tags.length > 0) {
+      // can't work with arrays (yet?) - so for now just take the first tag, if there are any
+      d.tag = d.tags[0];
+    }
+    d.date = new Date((d.created_at || 0) * 1000)
+    d.hour = d3.time.hour(d.date);
+  });
+
+  var ndx           = crossfilter(experiments);
+
+  // variables for pie chart
+  var runDimension  = ndx.dimension(function(d) {return d.user.location;}),
+      speedSumGroup = runDimension.group().reduceCount();
+
+  // variables for series chart
+  var moveHours     = ndx.dimension(function(d) {
+        return [d.tag, d.hour];
+      }),
+      tagCountGroup = moveHours.group().reduceCount(function(d) {
+        return d.tag;
+      }),
+      tagDimension  = ndx.dimension(function(d){
+        return d.tag ? d.tag : "";
+      });
+
+  chart
+    .width(600)
+    .height(400)
+    .slicesCap(12)
+    // .othersGrouper(false)
+    .innerRadius(100)
+    .dimension(runDimension)
+    .group(speedSumGroup, "Locations")
+    .legend(dc.legend());
+
+  topTagsSelected = [];
+  topTags = tagDimension.group().reduceCount().top(11)./*map(dc.pluck("key")).*/filter(function(d) { return d.key.trim() !== "" });
+  if (topTags.length > 10)
+    topTags.splice(10, 1);
+  $.each(topTags, function(i, tuple) {
+    if (tuple.key.trim() === '')
+      return;
+    $("#tags").append($("<div>").append($("<label>")
+        .text(tuple.key)
+        .prepend($("<input>")
+          .attr({
+            "type": "checkbox",
+            "value": tuple.key
+          })
+          .click(function() {
+            var value = $(this).val();
+            if ($(this).prop("checked")) {
+              topTagsSelected.push(value);
+            }
+            else {
+              var index = $.inArray(value, topTagsSelected);
+              if (index >= 0)
+                topTagsSelected.splice(index, 1);
+            }
+            lineChart.redraw();
+          })
+        )
+      ))
+  })
+
+  lineChart
+    .width(600)
+    .height(400)
+    // .round(d3.time.hour.round)
+    // .renderDataPoints(true)
+    .x(d3.time.scale().domain([new Date(2014, 5, 16, 1), new Date(2014, 5, 16, 12)])) // month is 0-indexed!
+    // .xUnits(d3.time.hours)
+    // .x(d3.scale.linear().domain([1,24]))
+    .chart(function(c) {
+      return dc.lineChart(c).interpolate('basis');
+    })
+    .filterSeries(function(serie) {
+      return topTagsSelected.indexOf(serie.key) >= 0;
+    })
+    .valueSort(false)
+    .seriesAccessor(function(d) {return d.key[0];})
+    .keyAccessor(function(d) { return d.key[1]; })
+    .valueAccessor(function(d) {return d.value; })
+    .elasticY(true)
+    .renderHorizontalGridLines(true)
+    .dimension(moveHours)
+    .brushOn(false)
+    .group(tagCountGroup)
+    .legend(dc.legend().x(550))
+    .title("Title");
+
+  moveHours.filter(false);
+
+
+
+  // chart.render();
+  // lineChart.render();
+  dc.renderAll();
+});
+function print_filter(filter){
+  var f=eval(filter);
+  if (typeof(f.length) != "undefined") {}else{}
+  if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+  if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+  console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+}
+
+</script>
+
+</body>
+</html>
