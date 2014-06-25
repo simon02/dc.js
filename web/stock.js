@@ -63,7 +63,7 @@ d3.csv("ndx.csv", function (data) {
     var all = ndx.groupAll();
 
     // dimension by year
-    var yearlyDimension = ndx.dimension(function (d) {
+    window.yearlyDimension = ndx.dimension(function (d) {
         return d3.time.year(d.dd).getFullYear();
     });
     // maintain running tallies by year as filters are applied or removed

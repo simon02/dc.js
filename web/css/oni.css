@@ -1,0 +1,72 @@
+html, body {
+  margin: 0;
+  font-family: 'Karla', sans-serif;
+  color: #595959;
+}
+
+.inner {
+  margin: 0 auto;
+  width: 980px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Dosis', sans-serif;
+  font-weight: 700;
+  color: #ff0000;
+}
+
+.clearfix {
+  clear: both;
+}
+
+header {
+  background-color: rgb(50,49,49);
+  min-height: 40px;
+  font-family: 'Dosis', sans-serif;
+  font-weight: 400;
+  color: white;
+  font-size: 20px;
+  line-height: 40px;
+}
+
+footer {
+  background-color: #F2F2F2;
+  min-height: 200px;
+}
+
+#content .intro {
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
+.articles {
+  width: 500px;
+  display: inline-block;
+  float: left;
+}
+.piechart {
+  width: 440px;
+  display: inline-block;
+  float: right;
+}
+
+#content_items .article {
+  padding: 4px 0;
+  font-size: 18px;
+}
+#content_items .article input[type='checkbox'] {
+  font-size: 24px;
+}
+
+.panel {
+  border: solid 1px #cecfcf;
+  margin-bottom: 35px;
+}
+.panel .content {
+  padding: 15px 10px;
+}
+.panel > .title {
+  margin: 0;
+  padding: 5px 10px;
+  background-color: #F9F9F9;
+}

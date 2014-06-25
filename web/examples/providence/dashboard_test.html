@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>dc.js - Pie Chart Example</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="../../css/dc.css"/>
+    <link rel="stylesheet" type="text/css" href="../../css/dashboard.css"/>
+    <link rel="stylesheet" type="text/css" href="../../css/oni.css"/>
+    <link href='http://fonts.googleapis.com/css?family=Dosis:400,700|Karla:400,700' rel='stylesheet' type='text/css'>
+</head>
+<body>
+  <header>
+    <div class="inner">
+      Dashboard voorbeeld
+    </div>
+  </header>
+  <div id="content" class="inner">
+    <div class='intro'>
+      <img src="../../img/logo.png" alt="" width='200'>
+    </div>
+    <h1>Providence Dashboard</h1>
+    <div class='articles panel' style='height:470px'>
+      <div class="title">
+        Top 10 artikels
+      </div>
+      <div id="content_items" class='content'>
+
+      </div>
+    </div>
+
+    <div class='piechart panel' style='height:470px'>
+      <div class='title'>Verhouding populariteit</div>
+      <div id="items_pie" class='content' style='margin-left: 10px'></div>
+    </div>
+
+    <div class="clearfix"></div>
+
+    <div style="clear: both"></div>
+    <div class='panel'>
+      <div class="title">
+        Vergelijk artikels in tijd
+      </div>
+      <div class="content">
+        Count:
+        <select name="" id="graph_option_count">
+          <option selected value="views">Views</option>
+          <option value="count">Shares</option>
+        </select>
+        <br>
+        Area below graph:
+        <select name="" id="graph_option_fill">
+          <option selected value="0">Empty</option>
+          <option value="1">Filled</option>
+        </select>
+        <br>
+        Show own media: <input id="include_own_media" type="checkbox" checked>
+        <div id="items_in_time"></div>
+        <div class="clearfix"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="title">
+        Abstract
+      </div>
+      <div class="content" id="abstract_article">
+        <h4 style='margin: 0'></h4>
+        <p class="text" style='margin: 8px 0'>
+
+        </p>
+        <a href=""></a>
+      </div>
+    </div>
+
+  </div>
+  <div class="clearfix"></div>
+  <footer>
+
+  </footer>
+
+
+<script type="text/javascript" src="../../js/d3.js"></script>
+<script type="text/javascript" src="../../js/crossfilter.js"></script>
+<script type="text/javascript" src="../../js/dc.js"></script>
+<script type="text/javascript" src="../../js/index.js"></script>
+<script type="text/javascript" src="../../js/jquery-1.11.1.min.js"></script>
+<!-- a file that contains more information about the links - would normally be injected by the server -->
+<script type="text/javascript" src="../../js/links.js"></script>
+<script type="text/javascript" src="../../js/dashboard_helpers.js"></script>
+<script type="text/javascript" src="../../js/dashboard.js"></script>
+
+</body>
+</html>

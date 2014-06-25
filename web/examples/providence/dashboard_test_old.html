@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>dc.js - Pie Chart Example</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="../../css/dc.css"/>
+    <style>
+      .d3-tip {
+        line-height: 1.2;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 8px;
+        text-align: center;
+      }
+      .d3-tip .key {
+        color: #ddd;
+        display: block;
+      }
+      .d3-tip .value {
+        color: #fff;
+        font-weight: bold;
+      }
+      .d3-tip:after {
+        box-sizing: border-box;
+        display: inline;
+        font-size: 10px;
+        width: 100%;
+        line-height: 1;
+        color: rgba(0, 0, 0, 0.8);
+        content: "\25BC";
+        position: absolute;
+        text-align: center;
+      }
+
+      /* Style northward tooltips differently */
+      .d3-tip.n:after {
+        margin: -1px 0 0 0;
+        top: 100%;
+        left: 0;
+      }
+      /* Southward tooltips */
+      .d3-tip.s:after {
+        content: "\25B2";
+        margin: 0 0 1px 0;
+        top: -8px;
+        left: 0;
+        text-align: center;
+      }
+
+      .title {
+        font-size: 18px;
+      }
+      .abstract {
+        padding: 10px 25px;
+      }
+      .abstract a {
+        margin-top: 5px;
+        display: inline-block;
+      }
+    </style>
+</head>
+<body>
+
+<div id="content_items" style="width: 600px; float: left">
+  <h3>Content Items</h3>
+</div>
+
+<div>
+  <h3>View Distribution</h3>
+  <div id="items_pie"></div>
+</div>
+<div id="user_pie"></div>
+
+<div style="clear: both"></div>
+<div>
+  <h3>Graph Options</h3>
+  Count:
+  <select name="" id="graph_option_count">
+    <option selected value="views">Views</option>
+    <option value="count">Shares</option>
+  </select>
+  Area below graph:
+  <select name="" id="graph_option_fill">
+    <option selected value="0">Empty</option>
+    <option value="1">Filled</option>
+  </select>
+</div>
+<div id="items_in_time"></div>
+<div id="items2"></div>
+<div id="tags"></div>
+
+
+<script type="text/javascript" src="../../js/d3.js"></script>
+<script type="text/javascript" src="../../js/crossfilter.js"></script>
+<script type="text/javascript" src="../../js/dc.js"></script>
+<script type="text/javascript" src="../../js/index.js"></script>
+<script type="text/javascript" src="../../js/jquery-1.11.1.min.js"></script>
+<script type="text/javascript">
+
+var lineChart = dc.seriesChart("#items_in_time");
+var lineTest = dc.lineChart("#items2");
+var pieChart = dc.pieChart("#items_pie");
+// var userChart = dc.pieChart("#user_pie");
+var links = {};
+d3.json("tweets_enriched.json", function(error, experiments) {
+
+  var urls = {};
+
+  experiments.forEach(function(d) {
+    d.date = new Date((d.created_at || 0) * 1000);
+    d.hour = d3.time.hour(d.date);
+    d.day  = d3.time.day(d.date);
+
+    urls[d.url] = urls[d.url] || { shares: 0, views: 0 }
+    d.shares = urls[d.url].shares += 1;
+    d.views = urls[d.url].views += d.followers;
+  });
+
+  urls = null;
+
+  var ndx           = crossfilter(experiments);
+
+  var urlDimension  = ndx.dimension(dc.pluck("url")),
+      urlSumGroup   = urlDimension.group().reduceCount(),
+      urlSumViewsGroup = urlDimension.group().reduce(
+        function (p, v) {
+          return v.views
+        },
+        function (p, v) {
+          return v.views
+        },
+        function () {
+          return 0;
+        }
+      ),
+      userDimension = ndx.dimension(dc.pluck("screen_name")),
+      userSumGroup  = userDimension.group().reduceCount();
+  window.urlHourDimension = ndx.dimension(function(d) {
+        return [d.url, d.date, d.screen_name];
+      });
+  var urlHourViewsGroup = urlHourDimension.group().reduce(
+        function (p, v) {
+          return v.views
+        },
+        function (p, v) {
+          return v.views
+        },
+        function () {
+          return 0;
+        }
+      ),
+      urlHourCountGroup = urlHourDimension.group().reduce(
+        function (p, v) {
+          return v.shares
+        },
+        function (p, v) {
+          return v.shares
+        },
+        function () {
+          return 0;
+        }
+      );
+
+
+  pieChart
+    .width(400)
+    .height(400)
+    .slicesCap(10)
+    .innerRadius(100)
+    .dimension(urlDimension)
+    .group(urlSumGroup)
+    .othersGrouper(false)
+    .ordering(function(d,e) {
+      return links[d.key].position;
+    })
+    .label(function(d) {
+      return links[d.key].position;
+    })
+    .minAngleForLabel(0);
+  // userChart
+  //   .width(400)
+  //   .height(400)
+  //   .slicesCap(10)
+  //   .innerRadius(100)
+  //   .othersGrouper(false)
+  //   .dimension(userDimension)
+  //   .group(userSumGroup)
+  //   .minAngleForLabel(0);
+
+  var topContentItems = urlSumGroup.top(10);
+  var totalTopContentItems = 0;
+  topContentItems.forEach(function(d) {
+    totalTopContentItems += d.value
+  });
+  var selectedContentItems = [];
+
+
+  var pieTip = d3.tip()
+    .attr('class', 'd3-tip')
+    .direction('s')
+    .offset([-10, 0])
+    .html(function (d) {
+      return "<span class='key'>Item {0}:</span><span class='value'>{1}%</span>".format(links[d.data.key].position, (d.value / totalTopContentItems * 100).toFixed(2));
+    });
+  var tip = d3.tip()
+    .attr('class', 'd3-tip')
+    .offset([-10, 0])
+    .html(function (d) {
+      return "<span class='key'>" +  d.x.toLocaleString() + "</span><span class='value'>"  + d.y + "</span>";
+    });
+
+  function formatDate(date) {
+    return
+  }
+
+  $.each(topContentItems, function(i, tuple) {
+    if (tuple.key.trim() === '')
+      return;
+    $("#content_items").append($("<div>")
+        .append($("<label>")
+          .addClass("title")
+          .text(links[tuple.key].position + ". " + links[tuple.key].title)
+          .prepend($("<input>")
+            .attr({
+              "type": "checkbox",
+              "value": tuple.key
+            })
+            .click(function() {
+              var value = $(this).val();
+              $(this).parent().siblings(".abstract").toggle();
+              if ($(this).prop("checked")) {
+                selectedContentItems.push(value);
+              }
+              else {
+                var index = $.inArray(value, selectedContentItems);
+                if (index >= 0)
+                  selectedContentItems.splice(index, 1);
+              }
+              lineChart.redraw();
+
+              d3.selectAll("g .dot").call(tip);
+              d3.selectAll("g .dot").on('mouseover', tip.show)
+                  .on('mouseleave', tip.hide);
+              })
+          )
+        )
+        .append($("<div>")
+          .addClass("abstract")
+          .hide()
+          .append($("<div>")
+            .addClass("text")
+            .text(links[tuple.key].abstract)
+          )
+          .append($("<a>")
+            .attr({
+              "href": tuple.key,
+              "target": "_blank"
+            })
+            .text("bekijk artikel")
+          )
+        )
+      )
+  });
+
+  $("#graph_option_count").change(function() {
+    if ($(this).val() === "views") {
+      lineChart.group(urlHourViewsGroup)
+        .redraw();
+    }
+    if ($(this).val() === "count") {
+      lineChart.group(urlHourCountGroup)
+        .redraw();
+    }
+  });
+  $("#graph_option_fill").change(function() {
+    var _this = $(this);
+    lineChart
+      .chart(function(c) {
+        return dc.lineChart(c)
+          .interpolate('step-after')
+          .brushOn(false)
+          .renderArea(_this.val() == 1)
+          .renderDataPoints(true);
+      })
+      .redraw();
+  });
+
+  $("#filter_own_media").change(function() {
+    if ($(this).prop("checked")) {
+      lineChart
+        .group(urlHourViewsGroup)
+        .redraw();
+    }
+    else {
+      lineChart
+        .group(urlHourViewsGroup)
+        .redraw();
+    }
+  })
+
+  lineChart
+    .width(1000)
+    .height(400)
+    .x(d3.time.scale().domain([experiments[0].day, experiments[experiments.length - 1].hour]))
+    .chart(function(c) {
+      return dc.lineChart(c)
+        .interpolate('step-after')
+        .brushOn(false)
+        .renderDataPoints(true);
+    })
+    .filterSeries(function(serie) {
+      return selectedContentItems.indexOf(serie.key) >= 0;
+    })
+    .seriesAccessor(function(d) {
+      return d.key[0];
+    })
+    .keyAccessor(function(d) { return d.key[1]; })
+    .valueAccessor(function(d) {return d.value; })
+    .elasticY(true)
+    .elasticX(true)
+    .renderHorizontalGridLines(true)
+    .brushOn(false)
+    .dimension(urlHourDimension)
+    .group(urlHourViewsGroup)
+    .legend(dc.legend().x(40).y(10))
+    .title("Title")
+    .yAxis().tickFormat(d3.format("s"));
+
+  lineTest
+    .width(1000)
+    .height(400)
+    .x(d3.time.scale().domain([new Date(0), new Date()]))
+    .elasticY(true)
+    .elasticX(true)
+    .dimension(urlDimension)
+    .group(urlSumGroup)
+    .yAxis().tickFormat(d3.format("s"));
+
+  // chart.render();
+  // lineChart.render();
+  dc.renderAll();
+
+  d3.selectAll(".pie-slice").call(pieTip);
+  d3.selectAll(".pie-slice").on('mouseover', pieTip.show)
+      .on('mouseout', pieTip.hide);
+});
+function print_filter(filter){
+  var f=eval(filter);
+  if (typeof(f.length) != "undefined") {}else{}
+  if (typeof(f.top) != "undefined") {f=f.top(Infinity);}else{}
+  if (typeof(f.dimension) != "undefined") {f=f.dimension(function(d) { return "";}).top(Infinity);}else{}
+  console.log(filter+"("+f.length+") = "+JSON.stringify(f).replace("[","[\n\t").replace(/}\,/g,"},\n\t").replace("]","\n]"));
+}
+links = {
+  "SUBTOTAL": {
+    "title": "Totaalbeeld",
+    "position": null
+  },
+  "http://deredactie.be/p/1.1997649": {
+    "title": "Jan Becaus wordt senator voor de N-VA",
+    "abstract": "Voormalig VRT-Journaalanker Jan Becaus wordt door de N-VA gecoöpteerd als senator. \"Ik ben blij met deze kans. We moeten de omslag maken naar het confederalisme\", zegt Becaus in een persmededeling. Ook Pol Van Den Driessche wordt door de N-VA naar de Senaat gestuurd.",
+    "position": 1
+  },
+  "http://deredactie.be/permalink/2.34025?video=1.1999162": {
+    "title": "Inwoners district Antwerpen beslissen mee over begroting",
+    "abstract": "De inwoners van het district Antwerpen hebben vanmiddag mee beslist over de besteding van tien procent van de begroting. Ze beslisten het geld te besteden aan betere fietspaden en voetpaden en senioren langer thuis laten wonen.",
+    "position": 2
+  },
+  "http://deredactie.be/p/1.1999604": {
+    "title": "Rusland draait gaskraan naar Oekraïne helemaal dicht",
+    "abstract": "Oekraïne krijgt van Gazprom enkel nog gas waarvoor het op voorhand heeft betaald. Dat betekent de facto dat Rusland de gaskraan dicht draait. De onderhandelingen over de leveringen zijn afgelopen nacht afgesprongen. Rusland zegt dat er voor de gasvoorziening in de EU geen gevolgen zullen zijn.",
+    "position": 3
+  },
+  "http://deredactie.be/permalink/2.34038?video=1.2000403": {
+    "title": "Madrid heeft zijn Ringland al, met voor- en nadelen",
+    "abstract": "De pleitbezorgers van Ringland mochten nog niet bij de informateur op de koffie, maar ze doen er alles aan om het idee voor de overkapping van de Antwerpse Ring hoog op de politieke agenda te houden. Gisteren feestten 10.000 sympathisanten nog tijdens het Ringlandfestival. Hier is zo'n overkapping voorlopig nog een droom, maar in Madrid is die al gerealiseerd. Daar kunnen ze meepraten over de voor- en nadelen van een overkapping.",
+    "position": 4
+  },
+  "http://deredactie.be/p/1.1996032": {
+    "title": "Apple waarschuwt voor oververhitting iPhone-opladers",
+    "abstract": "Apple waarschuwt voor iPhone-opladers die mogelijk makkelijk oververhit raken. Het gaat om de Europese 5 watt-adapters die verkocht werden tussen 2009-2012. De adapters maken deel uit van de iPhone-modellen 3GS, 4 en 4S. Wie in het bezit is van zo'n oplader kan die kosteloos omruilen voor een nieuwe, opnieuw ontworpen adapter.",
+    "position": 5
+  },
+  "http://deredactie.be/p/1.2000067": {
+    "title": "Leuven plaatst 800 bijkomende fietsenrekken in binnenstad",
+    "abstract": "De technische diensten van de stad Leuven zijn gestart met de plaatsing van 800 bijkomende fietsenrekken in de binnenstad, meer bepaald in de onmiddellijke omgeving van de voornaamste winkelwandelstraten en handelsstraten zoals de Bondgenotenlaan, de Tiensestaat en Diestsestraat. De plaatsing vergt een investering van 69.000 euro. Dat heeft schepen van Openbare Werken Dirk Robbeets bekendgemaakt.",
+    "position": 6
+  },
+  "http://deredactie.be/permalink/1.1998923": {
+    "title": "Quo vadis ACW? - Klaas Keirse",
+    "abstract": "Zaterdag blies de christelijke werknemersbeweging verzamelen in Antwerpen voor het lanceermoment ‘Koepel wordt Netwerk’. De koepel van christelijke werknemersorganisaties ACW werd er omgeturnd in een horizontaal netwerk van 11 organisaties en 4 geassocieerde partners. Daar hoort ook een nieuwe naam bij, en een nieuwe vzw. Maar hoe de christelijke werknemersbeweging na zaterdag op een aantal terreinen zal evolueren, blijft voorlopig koffiedik kijken.",
+    "position": 7
+  },
+  "http://deredactie.be/permalink/1.2000008": {
+    "title": "Pensioenrapport: \"Punten verdienen en dan omzetten in euro's\"",
+    "abstract": "De Commissie Pensioenhervorming heeft een rapport klaar met voorstellen om het Belgische pensioenstelsel te hervormen. Daarin valt vooral het nieuwe puntensysteem op. Belgische werknemers, ambtenaren en zelfstandigen zullen tijdens hun loopbaan punten kunnen verdienen. Die punten worden na de actieve loopbaan dan omgezet in euro's.",
+    "position": 8
+  },
+  "http://deredactie.be/p/1.2000794": {
+    "title": "Telenet voor de helft eigenaar van De Vijver Media",
+    "abstract": "Telenet wordt voor de helft eigenaar van De Vijver Media, de holding boven de commerciële zenders Vier en Vijf. Het bedrijf neemt een participatie van 50 procent in De Vijver Media via een overname van Sanoma's aandeel voor 26 miljoen euro en een bijkomende cash-investering in het bedrijf van 32 miljoen euro.",
+    "position": 9
+  },
+  "http://deredactie.be/permalink/1.1997649": {
+    "title": "Jan Becaus wordt senator voor de N-VA",
+    "abstract": "Voormalig VRT-Journaalanker Jan Becaus wordt door de N-VA gecoöpteerd als senator. \"Ik ben blij met deze kans. We moeten de omslag maken naar het confederalisme\", zegt Becaus in een persmededeling. Ook Pol Van Den Driessche wordt door de N-VA naar de Senaat gestuurd.",
+    "position": 10
+  }
+};
+// First, checks if it isn't implemented yet.
+if (!String.prototype.format) {
+  String.prototype.format = function() {
+    var args = arguments;
+    return this.replace(/{(\d+)}/g, function(match, number) {
+      return typeof args[number] != 'undefined'
+        ? args[number]
+        : match
+      ;
+    });
+  };
+}
+
+</script>
+
+</body>
+</html>

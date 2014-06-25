@@ -173,7 +173,8 @@ module.exports = function (grunt) {
                             output.js + ".map",
                             'node_modules/d3/d3.js',
                             'node_modules/crossfilter/crossfilter.js',
-                            'test/env-data.js'],
+                            'test/env-data.js',
+                            'bower_components/d3-tip/index.js'],
                       dest: 'web/js/'
                     }
                 ]
